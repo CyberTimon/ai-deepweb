@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Portal Browser</title>
+</head>
+<style>
+#portal-browser {
+    width: 80%;
+    margin: auto;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+#browser-bar {
+    display: flex;
+    padding: 5px;
+}
+
+#browser-bar input[type="text"] {
+    flex: 1;
+    margin: 0 10px;
+}
+
+#content-area {
+    height: 600px;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+    overflow-y: auto;
+} 
+</style>
+<body>
+    <div id="portal-browser">
+        <div id="browser-bar">
+            <button id="back-button">Back</button>
+            <input type="text" id="address-bar" placeholder="Enter URL here">
+            <button id="go-button">Go</button>
+        </div>
+        <div id="content-area">
+            <!-- Content will be dynamically injected here -->
+        </div>
+    </div>
+
+    <script>
+    let historyStack = [];  // Stack to keep track of visited URLs
+    let cache = {};         // Object to cache the HTML content of visited URLs
+    let currentUrl = '';    // String to keep track of the current URL
+    
+    // Initial "Google-like" search page HTML
+    const initialPageHTML = `
+    <div style="text-align: center; margin-top: 20px;">
+        <h1>Fake Google</h1>
+        <input type="text" id="fake-search" autocomplete="off" placeholder="Search something..." style="width: 60%; padding: 10px; margin-top: 20px;">
+        <button onclick="fakeSearch()">Search</button>
+    </div>
+    `;
+    
+    document.getElementById('content-area').innerHTML = initialPageHTML;
+    
+    document.getElementById('go-button').addEventListener('click', function() {
+        const url = 'ctai.net2/search?q=' + encodeURIComponent(document.getElementById('address-bar').value);
+        const queryText = document.getElementById('address-bar').value;
+        document.getElementById('address-bar').value = url;
+        navigateTo(url, queryText, true);
+    });
+    
+    document.getElementById('back-button').addEventListener('click', function() {
+        goBack();
+    });
+    
+    function navigateTo(url, queryText = '', pushToHistory = false) {
+        if (pushToHistory) {
+            // Push the current state to historyStack before navigating away
+            if (currentUrl) {
+                historyStack.push(currentUrl);
+            }
+            // Update the current URL
+            currentUrl = url;
+        }
+    
+        if (cache[url]) {
+            // If the URL is cached, load from cache
+            document.getElementById('content-area').innerHTML = cache[url];
+        } else {
+            // Show loading text
+            document.getElementById('content-area').innerHTML = '<p>Loading...</p>';
+            // Fetch new content from the server
+            fetch(`/navigate?url=${encodeURIComponent(url)}&query=${encodeURIComponent(queryText)}`)
+                .then(response => response.text())
+                .then(html => {
+                    // Cache the fetched content
+                    cache[url] = html;
+                    // Display the fetched content
+                    document.getElementById('content-area').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Failed to fetch page:', error);
+                    document.getElementById('content-area').innerHTML = `<p>Error loading page.</p>`;
+                });
+        }
+    }
+    
+    function goBack() {
+        if (historyStack.length > 0) {
+            // Pop the last visited URL from historyStack
+            const url = historyStack.pop();
+            // Navigate to the popped URL without pushing to history
+            navigateTo(url, '', false);
+        } else {
+            // Load the initial search page if no more history is available
+            document.getElementById('content-area').innerHTML = initialPageHTML;
+            currentUrl = '';  // Clear the current URL
+        }
+    }
+
+    function fakeSearch() {
+        const searchQuery = document.getElementById('fake-search').value;
+        const url = 'ctai.net2/search?q=' + encodeURIComponent(searchQuery);
+        const queryText = document.getElementById('fake-search').value;
+        document.getElementById('address-bar').value = url;
+        navigateTo(url, queryText, true);
+    }
+    </script>
+</body>
+</html>
